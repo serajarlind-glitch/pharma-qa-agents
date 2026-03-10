@@ -1,0 +1,46 @@
+# Pharma QA Agents Configuration
+
+ollama:
+  base_url: "http://127.0.0.1:11434"
+  model: "qwen2.5:14b"  # Default model for all agents
+  temperature: 0.3      # Lower = more consistent, higher = more creative
+
+# Agent-specific model overrides
+agents:
+  orchestrator:
+    model: "qwen2.5:14b"
+  
+  quality:
+    model: "qwen2.5:14b"
+  
+  lean:
+    model: "deepseek-r1:14b"  # Better reasoning for root cause
+    # Alternatively: "qwen2.5:14b" if RAM limited
+  
+  project:
+    model: "qwen2.5:14b"
+  
+  validation:
+    model: "qwen2.5:14b"
+  
+  risk:
+    model: "qwen2.5:14b"
+  
+  audit:
+    model: "qwen2.5:14b"
+  
+  document:
+    model: "qwen2.5:14b"
+  
+  analytical:
+    model: "qwen2.5:14b"
+
+output:
+  default_format: "markdown"
+  save_history: true
+  history_dir: "outputs/history"
+
+# Document processing (future feature)
+documents:
+  enable_pdf_extraction: false  # Requires additional libraries
+  max_context_length: 8000      # Characters from PDFs to include
