@@ -108,22 +108,46 @@ def run_workflow_cmd(args):
 
     def on_step(result):
         status = "OK" if result.success else "FAILED"
-        print(f"  [{status}] {result.step_name} ({result.elapsed_seconds:.1f}s)")
+        review = ""
+        if result.review_decision:
+            review = f" | Review: {result.review_decision} ({result.review_score}/10)"
+        print(f"  [{status}] {result.step_name} ({result.elapsed_seconds:.1f}s){review}")
 
-    print(f"\nRunning workflow: {args.workflow_name}\n")
+    # Determine precision mode
+    precision = getattr(args, "precision", False)
+    audit_dir = Path(args.output).parent / "audit" if args.output else None
+
+    print(f"\nRunning workflow: {args.workflow_name}")
+    if precision:
+        print("  Mode: PRECISION (review + structured output + audit trail + regulatory context)")
+    print()
+
     result = run_workflow(
         args.workflow_name,
         variables=variables,
         model=args.model or DEFAULT_MODEL,
         on_step_complete=on_step,
+        enable_review=precision,
+        enable_structured_output=precision,
+        enable_audit_trail=precision,
+        enable_regulatory_context=precision,
+        audit_log_dir=audit_dir if precision else None,
     )
 
     print(f"\n{result.summary()}\n")
+
+    if result.audit_trail_summary:
+        print(result.audit_trail_summary)
+        print()
 
     if args.output:
         Path(args.output).parent.mkdir(parents=True, exist_ok=True)
         Path(args.output).write_text(result.final_output)
         print(f"Final output saved to {args.output}")
+        if result.audit_trail_summary:
+            audit_file = Path(args.output).parent / "audit-trail.md"
+            audit_file.write_text(result.audit_trail_summary)
+            print(f"Audit trail saved to {audit_file}")
     else:
         print("\n--- Final Output ---\n")
         print(result.final_output)
@@ -151,6 +175,10 @@ def main():
     wf_p.add_argument("workflow_name", choices=list(WORKFLOWS.keys()))
     wf_p.add_argument("-v", "--var", action="append", help="key=value variable")
     wf_p.add_argument("-o", "--output", type=str, help="Save final output to file")
+    wf_p.add_argument(
+        "-p", "--precision", action="store_true",
+        help="Enable precision mode: QA review, structured output, audit trail, regulatory context",
+    )
 
     args = parser.parse_args()
 

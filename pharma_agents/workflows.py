@@ -2,12 +2,24 @@
 Predefined pharma QA workflows — ready-to-use multi-agent pipelines.
 
 Each workflow is a factory function that returns a configured AgentTeam.
+Workflows support precision modes for quality gates, structured outputs,
+regulatory reference injection, and audit trails.
 """
 
+from pathlib import Path
+from typing import Optional
+
+from pharma_agents.agent import DEFAULT_MODEL
 from pharma_agents.team import AgentTeam, WorkflowStep, StepType
 
 
-def capa_workflow() -> AgentTeam:
+def capa_workflow(
+    enable_review: bool = False,
+    enable_structured_output: bool = False,
+    enable_audit_trail: bool = False,
+    enable_regulatory_context: bool = False,
+    audit_log_dir: Optional[Path] = None,
+) -> AgentTeam:
     """
     Full CAPA investigation workflow.
 
@@ -19,7 +31,14 @@ def capa_workflow() -> AgentTeam:
       3. Project → CAPA action plan with timeline
       4. Document → Final investigation report & CAPA form
     """
-    team = AgentTeam(name="CAPA Investigation Workflow")
+    team = AgentTeam(
+        name="CAPA Investigation Workflow",
+        enable_review=enable_review,
+        enable_structured_output=enable_structured_output,
+        enable_audit_trail=enable_audit_trail,
+        enable_regulatory_context=enable_regulatory_context,
+        audit_log_dir=audit_log_dir,
+    )
 
     team.add_step(WorkflowStep(
         name="Deviation Classification",
@@ -32,12 +51,15 @@ def capa_workflow() -> AgentTeam:
             "Product: {product}"
         ),
         use_prior_context=False,
+        require_review=True,
+        regulatory_topics=["deviation", "capa", "quality_system"],
     ))
 
     team.add_step(WorkflowStep(
         name="Root Cause & Risk Analysis",
         step_type=StepType.PARALLEL,
         prompt_template="Analyze the following deviation: {deviation} (Batch: {batch})",
+        require_review=True,
         parallel_tasks=[
             {
                 "name": "Root Cause Analysis",
@@ -46,6 +68,7 @@ def capa_workflow() -> AgentTeam:
                     "Perform a structured root cause analysis (5 Whys + Ishikawa) for "
                     "this deviation:\n\n{deviation}\n\nBatch: {batch}, Product: {product}"
                 ),
+                "regulatory_topics": ["deviation", "capa"],
             },
             {
                 "name": "Risk Assessment",
@@ -56,6 +79,7 @@ def capa_workflow() -> AgentTeam:
                     "Deviation: {deviation}\n"
                     "Batch: {batch}, Product: {product}"
                 ),
+                "regulatory_topics": ["risk", "deviation"],
             },
         ],
     ))
@@ -72,6 +96,8 @@ def capa_workflow() -> AgentTeam:
             "- Effectiveness check plan\n\n"
             "Deviation: {deviation}\nBatch: {batch}"
         ),
+        require_review=True,
+        regulatory_topics=["capa", "quality_system"],
     ))
 
     team.add_step(WorkflowStep(
@@ -86,12 +112,20 @@ def capa_workflow() -> AgentTeam:
             "risk assessment, corrective actions, preventive actions, "
             "effectiveness criteria, and approval signatures."
         ),
+        require_review=True,
+        regulatory_topics=["documentation", "capa", "deviation"],
     ))
 
     return team
 
 
-def validation_workflow() -> AgentTeam:
+def validation_workflow(
+    enable_review: bool = False,
+    enable_structured_output: bool = False,
+    enable_audit_trail: bool = False,
+    enable_regulatory_context: bool = False,
+    audit_log_dir: Optional[Path] = None,
+) -> AgentTeam:
     """
     Equipment/process validation workflow.
 
@@ -103,7 +137,14 @@ def validation_workflow() -> AgentTeam:
       3. Analytical → Test method requirements
       4. Document → Complete validation protocol
     """
-    team = AgentTeam(name="Validation Protocol Workflow")
+    team = AgentTeam(
+        name="Validation Protocol Workflow",
+        enable_review=enable_review,
+        enable_structured_output=enable_structured_output,
+        enable_audit_trail=enable_audit_trail,
+        enable_regulatory_context=enable_regulatory_context,
+        audit_log_dir=audit_log_dir,
+    )
 
     team.add_step(WorkflowStep(
         name="Validation Strategy",
@@ -117,6 +158,8 @@ def validation_workflow() -> AgentTeam:
             "and regulatory basis."
         ),
         use_prior_context=False,
+        require_review=True,
+        regulatory_topics=["validation", "process_validation", "equipment_qualification"],
     ))
 
     team.add_step(WorkflowStep(
@@ -131,6 +174,8 @@ def validation_workflow() -> AgentTeam:
             "Use FMEA to identify critical quality attributes and critical "
             "process parameters requiring qualification."
         ),
+        require_review=True,
+        regulatory_topics=["risk", "validation"],
     ))
 
     team.add_step(WorkflowStep(
@@ -145,6 +190,7 @@ def validation_workflow() -> AgentTeam:
             "Include system suitability criteria, method references, and "
             "any method validation requirements."
         ),
+        regulatory_topics=["analytical", "validation"],
     ))
 
     team.add_step(WorkflowStep(
@@ -162,12 +208,20 @@ def validation_workflow() -> AgentTeam:
             "equipment description, test procedures with acceptance criteria, "
             "deviation handling, and approval block."
         ),
+        require_review=True,
+        regulatory_topics=["documentation", "validation"],
     ))
 
     return team
 
 
-def audit_readiness_workflow() -> AgentTeam:
+def audit_readiness_workflow(
+    enable_review: bool = False,
+    enable_structured_output: bool = False,
+    enable_audit_trail: bool = False,
+    enable_regulatory_context: bool = False,
+    audit_log_dir: Optional[Path] = None,
+) -> AgentTeam:
     """
     Audit/inspection readiness workflow.
 
@@ -179,7 +233,14 @@ def audit_readiness_workflow() -> AgentTeam:
       3. Project → Remediation plan
       4. Document → Audit readiness checklist & briefing pack
     """
-    team = AgentTeam(name="Audit Readiness Workflow")
+    team = AgentTeam(
+        name="Audit Readiness Workflow",
+        enable_review=enable_review,
+        enable_structured_output=enable_structured_output,
+        enable_audit_trail=enable_audit_trail,
+        enable_regulatory_context=enable_regulatory_context,
+        audit_log_dir=audit_log_dir,
+    )
 
     team.add_step(WorkflowStep(
         name="Readiness Assessment",
@@ -193,11 +254,14 @@ def audit_readiness_workflow() -> AgentTeam:
             "critical documentation that must be current."
         ),
         use_prior_context=False,
+        require_review=True,
+        regulatory_topics=["audit", "quality_system"],
     ))
 
     team.add_step(WorkflowStep(
         name="Compliance & Risk Check",
         step_type=StepType.PARALLEL,
+        require_review=True,
         parallel_tasks=[
             {
                 "name": "Compliance Review",
@@ -209,6 +273,7 @@ def audit_readiness_workflow() -> AgentTeam:
                     "change controls, or data integrity gaps that could be "
                     "flagged during inspection."
                 ),
+                "regulatory_topics": ["audit", "data_integrity", "quality_system"],
             },
             {
                 "name": "Inspection Risk Assessment",
@@ -219,6 +284,7 @@ def audit_readiness_workflow() -> AgentTeam:
                     "Rank risk areas by likelihood of inspector findings and "
                     "severity of potential observations (483, critical, major, minor)."
                 ),
+                "regulatory_topics": ["risk", "audit"],
             },
         ],
     ))
@@ -234,6 +300,7 @@ def audit_readiness_workflow() -> AgentTeam:
             "Prioritize actions by risk, assign owners, and set deadlines "
             "that allow time for QA review before the inspection date."
         ),
+        regulatory_topics=["audit", "capa"],
     ))
 
     team.add_step(WorkflowStep(
@@ -250,12 +317,20 @@ def audit_readiness_workflow() -> AgentTeam:
             "5. Back-room strategy and escalation contacts\n\n"
             "Audit Type: {audit_type}\nScope: {scope}"
         ),
+        require_review=True,
+        regulatory_topics=["documentation", "audit"],
     ))
 
     return team
 
 
-def sop_creation_workflow() -> AgentTeam:
+def sop_creation_workflow(
+    enable_review: bool = False,
+    enable_structured_output: bool = False,
+    enable_audit_trail: bool = False,
+    enable_regulatory_context: bool = False,
+    audit_log_dir: Optional[Path] = None,
+) -> AgentTeam:
     """
     SOP creation workflow.
 
@@ -266,7 +341,14 @@ def sop_creation_workflow() -> AgentTeam:
       2. Lean → Process optimization & best practices
       3. Document → Complete SOP document
     """
-    team = AgentTeam(name="SOP Creation Workflow")
+    team = AgentTeam(
+        name="SOP Creation Workflow",
+        enable_review=enable_review,
+        enable_structured_output=enable_structured_output,
+        enable_audit_trail=enable_audit_trail,
+        enable_regulatory_context=enable_regulatory_context,
+        audit_log_dir=audit_log_dir,
+    )
 
     team.add_step(WorkflowStep(
         name="Regulatory Framework",
@@ -281,6 +363,8 @@ def sop_creation_workflow() -> AgentTeam:
             "sections, and any mandatory acceptance criteria."
         ),
         use_prior_context=False,
+        require_review=True,
+        regulatory_topics=["documentation", "quality_system"],
     ))
 
     team.add_step(WorkflowStep(
@@ -309,12 +393,20 @@ def sop_creation_workflow() -> AgentTeam:
             "Produce the full SOP with all required sections, ready for "
             "review and approval."
         ),
+        require_review=True,
+        regulatory_topics=["documentation"],
     ))
 
     return team
 
 
-def oos_investigation_workflow() -> AgentTeam:
+def oos_investigation_workflow(
+    enable_review: bool = False,
+    enable_structured_output: bool = False,
+    enable_audit_trail: bool = False,
+    enable_regulatory_context: bool = False,
+    audit_log_dir: Optional[Path] = None,
+) -> AgentTeam:
     """
     Out-of-Specification investigation workflow.
 
@@ -327,7 +419,14 @@ def oos_investigation_workflow() -> AgentTeam:
       4. Risk → Impact assessment
       5. Document → Complete OOS investigation report
     """
-    team = AgentTeam(name="OOS Investigation Workflow")
+    team = AgentTeam(
+        name="OOS Investigation Workflow",
+        enable_review=enable_review,
+        enable_structured_output=enable_structured_output,
+        enable_audit_trail=enable_audit_trail,
+        enable_regulatory_context=enable_regulatory_context,
+        audit_log_dir=audit_log_dir,
+    )
 
     team.add_step(WorkflowStep(
         name="Phase I - Lab Investigation",
@@ -342,6 +441,8 @@ def oos_investigation_workflow() -> AgentTeam:
             "sample preparation, reagent/standard integrity, and calculation verification."
         ),
         use_prior_context=False,
+        require_review=True,
+        regulatory_topics=["oos", "analytical"],
     ))
 
     team.add_step(WorkflowStep(
@@ -355,11 +456,14 @@ def oos_investigation_workflow() -> AgentTeam:
             "Batch: {batch}, Product: {product}\n\n"
             "Assess regulatory reporting requirements and batch disposition impact."
         ),
+        require_review=True,
+        regulatory_topics=["oos", "deviation", "quality_system"],
     ))
 
     team.add_step(WorkflowStep(
         name="Phase II - Root Cause & Risk",
         step_type=StepType.PARALLEL,
+        require_review=True,
         parallel_tasks=[
             {
                 "name": "Manufacturing Root Cause",
@@ -371,6 +475,7 @@ def oos_investigation_workflow() -> AgentTeam:
                     "Investigate: raw materials, equipment, process parameters, "
                     "environmental conditions, and personnel factors."
                 ),
+                "regulatory_topics": ["oos", "deviation"],
             },
             {
                 "name": "OOS Risk Assessment",
@@ -382,6 +487,7 @@ def oos_investigation_workflow() -> AgentTeam:
                     "Evaluate: impact on released batches, field alert criteria, "
                     "recall assessment, and adjacent batch risk."
                 ),
+                "regulatory_topics": ["risk", "oos"],
             },
         ],
     ))
@@ -401,12 +507,17 @@ def oos_investigation_workflow() -> AgentTeam:
             "risk assessment summary, batch disposition recommendation, CAPA, "
             "and regulatory notification assessment."
         ),
+        require_review=True,
+        regulatory_topics=["documentation", "oos", "deviation"],
     ))
 
     return team
 
 
-# Registry of all available workflows
+# ---------------------------------------------------------------------------
+# Registry of all workflows
+# ---------------------------------------------------------------------------
+
 WORKFLOWS = {
     "capa": {
         "factory": capa_workflow,
@@ -441,6 +552,12 @@ def run_workflow(
     variables: dict,
     model: str = DEFAULT_MODEL,
     on_step_complete=None,
+    # Precision controls
+    enable_review: bool = False,
+    enable_structured_output: bool = False,
+    enable_audit_trail: bool = False,
+    enable_regulatory_context: bool = False,
+    audit_log_dir: Optional[Path] = None,
 ) -> "WorkflowResult":
     """
     Convenience function to run a named workflow.
@@ -450,15 +567,40 @@ def run_workflow(
         variables: Dict of variables for prompt templates.
         model: Claude model to use.
         on_step_complete: Optional progress callback.
+        enable_review: Enable QA reviewer cross-validation.
+        enable_structured_output: Require structured JSON in responses.
+        enable_audit_trail: Generate ALCOA+ compliant audit trail.
+        enable_regulatory_context: Auto-inject regulatory references.
+        audit_log_dir: Directory for audit trail files.
 
     Returns:
-        WorkflowResult with all outputs.
+        WorkflowResult with all outputs, reviews, and audit trail.
+
+    Example — Standard mode (fast):
+        result = run_workflow("capa", {"deviation": "...", "batch": "...", "product": "..."})
+
+    Example — Precision mode (thorough, with all quality layers):
+        result = run_workflow(
+            "capa",
+            {"deviation": "...", "batch": "...", "product": "..."},
+            enable_review=True,
+            enable_structured_output=True,
+            enable_audit_trail=True,
+            enable_regulatory_context=True,
+            audit_log_dir=Path("outputs/audit"),
+        )
     """
     if workflow_name not in WORKFLOWS:
         available = ", ".join(WORKFLOWS.keys())
         raise ValueError(f"Unknown workflow: '{workflow_name}'. Available: {available}")
 
     entry = WORKFLOWS[workflow_name]
-    team = entry["factory"]()
+    team = entry["factory"](
+        enable_review=enable_review,
+        enable_structured_output=enable_structured_output,
+        enable_audit_trail=enable_audit_trail,
+        enable_regulatory_context=enable_regulatory_context,
+        audit_log_dir=audit_log_dir,
+    )
     team.model = model
     return team.run(variables=variables, on_step_complete=on_step_complete)

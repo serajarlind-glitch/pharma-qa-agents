@@ -2,7 +2,7 @@
 
 ## What This Is
 A team of 9 specialized AI agents for pharmaceutical quality assurance, powered by Claude API.
-Upgraded from a legacy Ollama-based CLI to a proper Claude-native multi-agent system.
+Upgraded from a legacy Ollama-based CLI to a Claude-native multi-agent system with precision layers.
 
 ## Agent Team
 
@@ -18,91 +18,126 @@ Upgraded from a legacy Ollama-based CLI to a proper Claude-native multi-agent sy
 | `document` | Document Production Specialist | SOPs, CAPA forms, protocols, investigation reports |
 | `analytical` | Analytical Method Writer | HPLC, dissolution, method validation, ICH Q2 |
 
-## Predefined Workflows
+## Precision Layers (99.99% Target)
 
-### CAPA Investigation (`capa`)
-Full deviation-to-resolution pipeline:
-1. Quality → deviation classification
-2. Lean + Risk (parallel) → root cause + risk assessment
-3. Project → CAPA action plan
-4. Document → investigation report
+### 1. QA Reviewer Agent (`reviewer.py`)
+Cross-validates every agent output. Scores on 4 axes:
+- **Citation Accuracy** (1-10): Are regulatory references real and correctly numbered?
+- **Completeness** (1-10): Are all required deliverables present?
+- **Compliance** (1-10): Does output meet GMP documentation standards?
+- **Consistency** (1-10): No internal contradictions?
 
-Variables: `deviation`, `batch`, `product`
+Quality gate decisions: Pass / Pass with Comments / Revise / Reject.
+If review fails, the agent auto-revises with specific feedback.
 
-### Validation Protocol (`validation`)
-1. Validation → strategy & protocol design
-2. Risk → scope assessment
-3. Analytical → test method requirements
-4. Document → complete protocol
+### 2. Structured Output Schemas (`schemas.py`)
+Every agent response includes mandatory JSON metadata:
+- Severity classification (Critical/Major/Minor)
+- Confidence level (High/Medium/Low) with basis
+- GxP impact categories
+- Regulatory references with authority
+- Action items with owners, deadlines, verification methods
+- Assumptions and limitations declared
 
-Variables: `equipment`, `validation_type`, `process`
+### 3. Regulatory Standards Database (`standards.py`)
+Embedded reference index for 18+ regulations:
+- FDA 21 CFR Parts 11, 210, 211
+- EU GMP Parts I, Annexes 1, 11, 15
+- ICH Q1A, Q2, Q3C, Q7, Q8, Q9, Q10, Q12
+- GAMP 5, ALCOA+ Data Integrity
+- USP General Chapters
 
-### Audit Readiness (`audit`)
-1. Audit → gap analysis
-2. Quality + Risk (parallel) → compliance & risk check
-3. Project → remediation plan
-4. Document → readiness pack
+Auto-injected into agent context based on topic.
 
-Variables: `audit_type`, `scope`, `timeline`
+### 4. ALCOA+ Audit Trail (`audit_trail.py`)
+Full GxP traceability for every agent interaction:
+- SHA-256 hash of every output (tamper detection)
+- Timestamps (UTC), agent attribution, model used
+- Review scores and gate decisions
+- Append-only JSONL log files
 
-### SOP Creation (`sop`)
-1. Quality → regulatory framework
-2. Lean → process optimization
-3. Document → complete SOP
+### 5. Precision Prompt Standards
+Every agent prompt includes mandatory rules:
+- Citation accuracy (never fabricate section numbers)
+- Confidence declaration for each conclusion
+- Assumptions & limitations disclosure
+- Controlled vocabulary (shall/should/may/must)
+- Anti-hallucination: "I don't have sufficient information" > guess
+- Human review flag for safety-critical decisions
 
-Variables: `title`, `process`, `department`
+## Running Modes
 
-### OOS Investigation (`oos`)
-1. Analytical → Phase I lab investigation
-2. Quality → OOS classification
-3. Lean + Risk (parallel) → root cause + impact
-4. Document → investigation report
-
-Variables: `test_result`, `specification`, `method`, `batch`, `product`
-
-## How to Use in Claude Code
-
-### Single agent query (Python):
-```python
-from pharma_agents import PharmaAgent
-agent = PharmaAgent("quality")
-response = agent.query("Assess criticality of temperature excursion: 12°C for 45 minutes")
-```
-
-### Run a workflow (Python):
+### Standard Mode (fast, single-pass):
 ```python
 from pharma_agents import run_workflow
 result = run_workflow("capa", variables={
-    "deviation": "Batch 2024-0892 failed dissolution test, 68% at 30 min (spec ≥80%)",
+    "deviation": "Batch 2024-0892 failed dissolution, 68% at 30 min (spec >=80%)",
     "batch": "2024-0892",
     "product": "Aspirin 500mg tablets",
 })
-print(result.final_output)
+```
+
+### Precision Mode (full quality layers):
+```python
+from pharma_agents import run_workflow
+from pathlib import Path
+
+result = run_workflow(
+    "capa",
+    variables={
+        "deviation": "Batch 2024-0892 failed dissolution, 68% at 30 min (spec >=80%)",
+        "batch": "2024-0892",
+        "product": "Aspirin 500mg tablets",
+    },
+    enable_review=True,              # QA reviewer cross-validation
+    enable_structured_output=True,   # Mandatory JSON metadata
+    enable_audit_trail=True,         # ALCOA+ traceability
+    enable_regulatory_context=True,  # Auto-inject regulatory references
+    audit_log_dir=Path("outputs/audit"),
+)
+print(result.summary())              # Step table with review scores
+print(result.audit_trail_summary)    # Full ALCOA+ audit trail
+print(result.final_output)           # Final document
 ```
 
 ### CLI:
 ```bash
-# Single agent
-python run.py agent quality "Assess temperature excursion"
+# Standard mode
+python run.py workflow capa --var deviation="Dissolution failure" --var batch="2024-0892" --var product="Aspirin"
 
-# Workflow
-python run.py workflow capa --var deviation="Dissolution failure" --var batch="2024-0892" --var product="Aspirin 500mg"
+# Precision mode
+python run.py workflow capa --precision --var deviation="Dissolution failure" --var batch="2024-0892" --var product="Aspirin" -o outputs/capa-report.md
 ```
+
+## Predefined Workflows
+
+| Workflow | Agents Used | Steps | Key Variables |
+|----------|------------|-------|---------------|
+| `capa` | quality, lean, risk, project, document | 4 (incl. parallel) | deviation, batch, product |
+| `validation` | validation, risk, analytical, document | 4 | equipment, validation_type, process |
+| `audit` | audit, quality, risk, project, document | 4 (incl. parallel) | audit_type, scope, timeline |
+| `sop` | quality, lean, document | 3 | title, process, department |
+| `oos` | analytical, quality, lean, risk, document | 4 (incl. parallel) | test_result, specification, method, batch, product |
 
 ## Project Structure
 ```
-pharma_agents/          # Core package
-  __init__.py           # Public API
-  agent.py              # PharmaAgent class (Claude API)
-  prompts.py            # System prompts for all 9 agents
-  team.py               # AgentTeam orchestration (parallel/sequential/synthesis)
-  workflows.py          # Predefined workflow factories
-run.py                  # CLI entry point
-requirements.txt        # anthropic SDK dependency
+pharma_agents/              # Core package
+  __init__.py               # Public API
+  agent.py                  # PharmaAgent class (Claude API)
+  prompts.py                # System prompts + precision preamble for all 9 agents
+  team.py                   # AgentTeam orchestration with quality gates
+  workflows.py              # 5 predefined workflow factories
+  reviewer.py               # QA Reviewer agent (cross-validation)
+  schemas.py                # Structured output schemas + extraction
+  standards.py              # Regulatory reference database (18+ regulations)
+  audit_trail.py            # ALCOA+ audit trail system
+run.py                      # CLI entry point
+requirements.txt            # anthropic SDK dependency
 ```
 
 ## Dependencies
 - `anthropic` Python SDK (requires ANTHROPIC_API_KEY env var)
+- `pyyaml` (for legacy config compat)
 - Python 3.10+
 
 ## Legacy Files
