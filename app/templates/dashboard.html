@@ -11,7 +11,7 @@
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-4 gap-4 mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
             <div class="flex items-center justify-between">
                 <div>
@@ -62,7 +62,7 @@
     <h2 class="text-lg font-semibold text-pharma-700 mb-4">
         <i class="fas fa-project-diagram mr-2 text-teal-500"></i>Workflows
     </h2>
-    <div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
         {% for key, wf in workflows.items() %}
         <a href="/workflow/{{ key }}" class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 hover:border-teal-300 hover:shadow-md transition group">
             <div class="flex items-start justify-between mb-3">
@@ -83,14 +83,14 @@
     <h2 class="text-lg font-semibold text-pharma-700 mb-4">
         <i class="fas fa-users mr-2 text-teal-500"></i>Agent Team
     </h2>
-    <div class="grid grid-cols-4 gap-3 mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-8">
         {% for key, agent in agents.items() %}
-        <a href="/chat/{{ key }}" class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 hover:border-blue-300 hover:shadow-md transition group">
+        <a href="/chat/{{ key }}" class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 hover:border-blue-300 hover:shadow-md transition group min-w-0">
             <div class="w-10 h-10 bg-pharma-500 rounded-lg flex items-center justify-center mb-3 group-hover:bg-teal-500 transition">
                 <i class="fas fa-user-md text-white"></i>
             </div>
-            <h3 class="font-semibold text-sm text-pharma-700">{{ agent.name }}</h3>
-            <p class="text-xs text-slate-400 mt-1">{{ agent.title }}</p>
+            <h3 class="font-semibold text-sm text-pharma-700 truncate">{{ agent.name }}</h3>
+            <p class="text-xs text-slate-400 mt-1 truncate">{{ agent.title }}</p>
         </a>
         {% endfor %}
     </div>

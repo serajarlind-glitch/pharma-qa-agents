@@ -37,6 +37,9 @@ templates.env.filters["from_json"] = lambda s: _json.loads(s) if s else {}
 # Initialize database on startup
 init_db()
 
+# Base context for all templates (sidebar needs agents + workflows on every page)
+BASE_CTX = {"agents": AGENT_ROLES, "workflows": WORKFLOWS}
+
 
 # ---------------------------------------------------------------------------
 # Pages
@@ -47,9 +50,8 @@ async def dashboard(request: Request):
     stats = get_stats()
     recent = get_runs(limit=10)
     return templates.TemplateResponse("dashboard.html", {
+        **BASE_CTX,
         "request": request,
-        "agents": AGENT_ROLES,
-        "workflows": WORKFLOWS,
         "stats": stats,
         "recent_runs": recent,
     })
@@ -61,10 +63,10 @@ async def workflow_page(request: Request, name: str):
         return HTMLResponse("Workflow not found", status_code=404)
     wf = WORKFLOWS[name]
     return templates.TemplateResponse("workflow.html", {
+        **BASE_CTX,
         "request": request,
         "name": name,
         "workflow": wf,
-        "agents": AGENT_ROLES,
     })
 
 
@@ -74,6 +76,7 @@ async def chat_page(request: Request, agent_role: str):
         return HTMLResponse("Agent not found", status_code=404)
     history = get_chat_history(agent_role)
     return templates.TemplateResponse("chat.html", {
+        **BASE_CTX,
         "request": request,
         "agent_role": agent_role,
         "agent": AGENT_ROLES[agent_role],
@@ -86,6 +89,7 @@ async def chat_page(request: Request, agent_role: str):
 async def history_page(request: Request):
     runs = get_runs(limit=100)
     return templates.TemplateResponse("history.html", {
+        **BASE_CTX,
         "request": request,
         "runs": runs,
     })
@@ -97,6 +101,7 @@ async def run_detail_page(request: Request, run_id: str):
     if not data:
         return HTMLResponse("Run not found", status_code=404)
     return templates.TemplateResponse("run_detail.html", {
+        **BASE_CTX,
         "request": request,
         "run": data["run"],
         "steps": data["steps"],

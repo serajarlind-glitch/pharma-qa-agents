@@ -71,4 +71,5 @@ echo ""
 (sleep 1.5 && open "http://localhost:$PORT" 2>/dev/null || xdg-open "http://localhost:$PORT" 2>/dev/null) &
 
 # Run server
-python3 -m uvicorn app.server:app --host 0.0.0.0 --port $PORT --reload
+# Bind to 127.0.0.1 ONLY — no one else on the network can access this
+python3 -m uvicorn app.server:app --host 127.0.0.1 --port $PORT --reload
