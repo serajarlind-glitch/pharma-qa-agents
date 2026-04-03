@@ -1,0 +1,25 @@
+/* Pharma QA Agents — Custom styles */
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Sidebar active state */
+.nav-link.active { background: rgba(255,255,255,0.1); font-weight: 600; }
+
+/* Smooth transitions */
+* { transition-property: background-color, border-color, color, opacity;
+    transition-duration: 150ms; transition-timing-function: ease; }
+
+/* Focus styles */
+input:focus, textarea:focus, select:focus {
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+/* Button disabled */
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Table row hover */
+tbody tr:hover { background-color: #f8fafc; }

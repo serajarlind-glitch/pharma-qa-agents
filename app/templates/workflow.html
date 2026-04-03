@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}{{ name|upper }} Workflow - Pharma QA{% endblock %}
+
+{% block content %}
+<div class="p-8">
+    <div class="mb-6">
+        <a href="/" class="text-sm text-teal-600 hover:text-teal-700"><i class="fas fa-arrow-left mr-1"></i> Dashboard</a>
+        <h1 class="text-2xl font-bold text-pharma-700 mt-2">{{ name|upper }} Workflow</h1>
+        <p class="text-slate-500 mt-1">{{ workflow.description }}</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-8">
+        <!-- Left: Form -->
+        <div>
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <h2 class="font-semibold text-pharma-700 mb-4"><i class="fas fa-edit mr-2 text-teal-500"></i>Input Variables</h2>
+                <form id="workflow-form" class="space-y-4">
+                    {% for var in workflow.variables %}
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">{{ var|replace("_"," ")|title }}</label>
+                        <textarea name="{{ var }}" rows="2"
+                            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                            placeholder="Enter {{ var }}..."></textarea>
+                    </div>
+                    {% endfor %}
+
+                    <div class="flex items-center gap-3 pt-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="precision-mode" class="w-4 h-4 text-teal-500 rounded border-slate-300 focus:ring-teal-500">
+                            <span class="text-sm font-medium text-slate-700">Precision Mode</span>
+                        </label>
+                        <span class="text-xs text-slate-400">(QA review + audit trail + live regulatory)</span>
+                    </div>
+
+                    <button type="submit" id="run-btn"
+                        class="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2">
+                        <i class="fas fa-play"></i>
+                        Run Workflow
+                    </button>
+                </form>
+
+                <!-- Chat input for conversational mode -->
+                <div class="mt-6 pt-6 border-t border-slate-200">
+                    <h3 class="text-sm font-medium text-slate-500 mb-2">Or describe in natural language:</h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="chat-input" placeholder="Run CAPA for batch 2024-0892 dissolution failure..."
+                            class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+                        <button onclick="parseChat()" class="bg-pharma-500 hover:bg-pharma-600 text-white px-4 py-2 rounded-lg text-sm transition">
+                            <i class="fas fa-magic"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Progress & Results -->
+        <div>
+            <!-- Progress panel (hidden initially) -->
+            <div id="progress-panel" class="hidden">
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200 mb-4">
+                    <h2 class="font-semibold text-pharma-700 mb-4">
+                        <i class="fas fa-cog fa-spin mr-2 text-teal-500" id="progress-icon"></i>
+                        <span id="progress-title">Running...</span>
+                    </h2>
+                    <div id="step-list" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- Results panel (hidden initially) -->
+            <div id="results-panel" class="hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 bg-green-50 border-b border-green-200 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check-circle text-green-500"></i>
+                            <span class="font-semibold text-green-700">Workflow Complete</span>
+                            <span id="result-time" class="text-sm text-green-600"></span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="exportRun()" class="text-sm bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition">
+                                <i class="fas fa-download mr-1"></i> Export
+                            </button>
+                            <a id="detail-link" href="#" class="text-sm bg-pharma-500 hover:bg-pharma-600 text-white px-3 py-1.5 rounded-lg transition">
+                                <i class="fas fa-eye mr-1"></i> Full Detail
+                            </a>
+                        </div>
+                    </div>
+                    <div id="result-output" class="p-6 markdown-body max-h-[600px] overflow-y-auto text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Placeholder -->
+            <div id="placeholder-panel" class="bg-white rounded-xl p-12 shadow-sm border border-slate-200 text-center">
+                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-rocket text-slate-400 text-2xl"></i>
+                </div>
+                <p class="text-slate-400">Fill in the variables and click Run to start the workflow</p>
+                <p class="text-xs text-slate-300 mt-2">Agents will work in parallel where possible</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const WORKFLOW = "{{ name }}";
+let currentRunId = null;
+
+document.getElementById('workflow-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const variables = {};
+    const inputs = form.querySelectorAll('textarea');
+    inputs.forEach(input => {
+        if (input.value.trim()) variables[input.name] = input.value.trim();
+    });
+    const precision = document.getElementById('precision-mode').checked;
+    await runWorkflow(variables, precision);
+});
+
+async function runWorkflow(variables, precision) {
+    document.getElementById('placeholder-panel').classList.add('hidden');
+    document.getElementById('results-panel').classList.add('hidden');
+    document.getElementById('progress-panel').classList.remove('hidden');
+    document.getElementById('step-list').innerHTML = '';
+    document.getElementById('run-btn').disabled = true;
+    document.getElementById('run-btn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+
+    const res = await fetch('/api/workflow/run', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({workflow: WORKFLOW, variables, precision}),
+    });
+    const data = await res.json();
+    currentRunId = data.run_id;
+
+    // Stream progress via SSE
+    const evtSource = new EventSource(`/api/workflow/progress/${currentRunId}`);
+    evtSource.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'step') {
+            addStepToUI(msg);
+        } else if (msg.type === 'complete') {
+            evtSource.close();
+            showResults(msg);
+        }
+    };
+    evtSource.onerror = () => {
+        evtSource.close();
+        setTimeout(() => checkCompletion(), 2000);
+    };
+}
+
+function addStepToUI(step) {
+    const list = document.getElementById('step-list');
+    const icon = step.success ? 'fa-check-circle text-green-500' : 'fa-times-circle text-red-500';
+    const review = step.review_decision ? `<span class="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full ml-2">${step.review_decision} (${step.review_score}/10)</span>` : '';
+    list.innerHTML += `
+        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50">
+            <i class="fas ${icon}"></i>
+            <div class="flex-1">
+                <span class="text-sm font-medium">${step.step}</span>
+                <span class="text-xs text-slate-400 ml-2">${step.agent}</span>
+                ${review}
+            </div>
+            <span class="text-xs text-slate-400">${step.elapsed.toFixed(1)}s</span>
+        </div>`;
+}
+
+function showResults(msg) {
+    document.getElementById('progress-icon').className = 'fas fa-check-circle mr-2 text-green-500';
+    document.getElementById('progress-title').textContent = 'Complete';
+    document.getElementById('results-panel').classList.remove('hidden');
+    document.getElementById('result-time').textContent = `(${msg.run.total_elapsed.toFixed(1)}s)`;
+    document.getElementById('result-output').innerHTML = simpleMarkdown(msg.run.final_output || 'No output');
+    document.getElementById('detail-link').href = `/run/${currentRunId}`;
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('run-btn').innerHTML = '<i class="fas fa-play"></i> Run Again';
+}
+
+async function checkCompletion() {
+    const res = await fetch(`/api/run/${currentRunId}`);
+    const data = await res.json();
+    if (data.run && data.run.status !== 'running') {
+        showResults(data);
+    }
+}
+
+async function exportRun() {
+    if (!currentRunId) return;
+    const res = await fetch(`/api/export/${currentRunId}?format=markdown`);
+    const data = await res.json();
+    const blob = new Blob([data.content], {type: 'text/markdown'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = data.filename; a.click();
+}
+
+function parseChat() {
+    const input = document.getElementById('chat-input').value;
+    // Simple extraction of variables from natural language
+    const textareas = document.querySelectorAll('#workflow-form textarea');
+    if (textareas.length > 0 && input) {
+        textareas[0].value = input;
+        document.getElementById('chat-input').value = '';
+    }
+}
+
+function simpleMarkdown(text) {
+    return text
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/^- (.*$)/gm, '<li>$1</li>')
+        .replace(/^(\d+)\. (.*$)/gm, '<li>$2</li>')
+        .replace(/\n/g, '<br>');
+}
+</script>
+{% endblock %}

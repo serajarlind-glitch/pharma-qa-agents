@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}{{ agent.name }} - Chat{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-full">
+    <!-- Header -->
+    <div class="p-6 border-b border-slate-200 bg-white flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-pharma-500 rounded-xl flex items-center justify-center">
+                <i class="fas fa-user-md text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-pharma-700">{{ agent.name }}</h1>
+                <p class="text-sm text-slate-400">{{ agent.title }}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <select id="agent-select" onchange="switchAgent(this.value)"
+                class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+                {% for key, a in all_agents.items() %}
+                <option value="{{ key }}" {% if key == agent_role %}selected{% endif %}>{{ a.name }}</option>
+                {% endfor %}
+            </select>
+            <span class="inline-flex items-center gap-1.5 bg-green-50 text-green-600 text-xs font-medium px-3 py-1.5 rounded-full">
+                <span class="w-2 h-2 bg-green-400 rounded-full pulse-dot"></span>
+                Online
+            </span>
+        </div>
+    </div>
+
+    <!-- Chat messages -->
+    <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4">
+        {% if not history %}
+        <div class="text-center py-12">
+            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-comments text-slate-300 text-3xl"></i>
+            </div>
+            <p class="text-slate-400">Start a conversation with {{ agent.name }}</p>
+            <p class="text-sm text-slate-300 mt-1">Ask about {{ agent.title|lower }} topics</p>
+        </div>
+        {% endif %}
+
+        {% for msg in history %}
+        <!-- User message -->
+        <div class="flex justify-end">
+            <div class="max-w-2xl bg-teal-500 text-white rounded-2xl rounded-br-md px-5 py-3">
+                <p class="text-sm">{{ msg.user_message }}</p>
+            </div>
+        </div>
+        <!-- Agent message -->
+        <div class="flex justify-start">
+            <div class="max-w-2xl bg-white border border-slate-200 rounded-2xl rounded-bl-md px-5 py-3 shadow-sm">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-6 h-6 bg-pharma-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-md text-white text-xs"></i>
+                    </div>
+                    <span class="text-xs font-semibold text-pharma-700">{{ agent.name }}</span>
+                </div>
+                <div class="text-sm markdown-body">{{ msg.agent_response|replace('\n','<br>')|safe }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Input -->
+    <div class="p-4 border-t border-slate-200 bg-white flex-shrink-0">
+        <form id="chat-form" class="flex gap-3">
+            <input type="text" id="user-input" placeholder="Ask {{ agent.name }} a question..."
+                class="flex-1 border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                autocomplete="off">
+            <button type="submit" id="send-btn"
+                class="bg-teal-500 hover:bg-teal-600 text-white px-6 py-3 rounded-xl font-semibold transition flex items-center gap-2">
+                <i class="fas fa-paper-plane"></i>
+                Send
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const AGENT = "{{ agent_role }}";
+const chatMessages = document.getElementById('chat-messages');
+chatMessages.scrollTop = chatMessages.scrollHeight;
+
+document.getElementById('chat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('user-input');
+    const message = input.value.trim();
+    if (!message) return;
+
+    // Add user message
+    addMessage('user', message);
+    input.value = '';
+
+    // Show typing indicator
+    const typingId = addTyping();
+
+    // Disable send
+    document.getElementById('send-btn').disabled = true;
+
+    try {
+        const res = await fetch(`/api/chat/${AGENT}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({message}),
+        });
+        const data = await res.json();
+        removeTyping(typingId);
+        addMessage('agent', data.response, data.agent);
+    } catch (err) {
+        removeTyping(typingId);
+        addMessage('agent', 'Error: Could not reach the agent. Check your API key.', 'System');
+    }
+
+    document.getElementById('send-btn').disabled = false;
+});
+
+function addMessage(role, text, agentName) {
+    const div = document.createElement('div');
+    if (role === 'user') {
+        div.className = 'flex justify-end';
+        div.innerHTML = `<div class="max-w-2xl bg-teal-500 text-white rounded-2xl rounded-br-md px-5 py-3"><p class="text-sm">${escapeHtml(text)}</p></div>`;
+    } else {
+        div.className = 'flex justify-start';
+        div.innerHTML = `
+            <div class="max-w-2xl bg-white border border-slate-200 rounded-2xl rounded-bl-md px-5 py-3 shadow-sm">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-6 h-6 bg-pharma-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-md text-white text-xs"></i>
+                    </div>
+                    <span class="text-xs font-semibold text-pharma-700">${agentName || 'Agent'}</span>
+                </div>
+                <div class="text-sm markdown-body">${simpleMarkdown(text)}</div>
+            </div>`;
+    }
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function addTyping() {
+    const id = 'typing-' + Date.now();
+    const div = document.createElement('div');
+    div.id = id;
+    div.className = 'flex justify-start';
+    div.innerHTML = `
+        <div class="bg-white border border-slate-200 rounded-2xl rounded-bl-md px-5 py-4 shadow-sm">
+            <div class="flex gap-1.5">
+                <span class="w-2 h-2 bg-slate-400 rounded-full pulse-dot" style="animation-delay: 0s"></span>
+                <span class="w-2 h-2 bg-slate-400 rounded-full pulse-dot" style="animation-delay: 0.3s"></span>
+                <span class="w-2 h-2 bg-slate-400 rounded-full pulse-dot" style="animation-delay: 0.6s"></span>
+            </div>
+        </div>`;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return id;
+}
+
+function removeTyping(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+}
+
+function switchAgent(role) {
+    window.location.href = `/chat/${role}`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function simpleMarkdown(text) {
+    return text
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/^- (.*$)/gm, '<li>$1</li>')
+        .replace(/\n/g, '<br>');
+}
+</script>
+{% endblock %}
