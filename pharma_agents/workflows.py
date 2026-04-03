@@ -85,19 +85,39 @@ def capa_workflow(
     ))
 
     team.add_step(WorkflowStep(
-        name="CAPA Action Plan",
-        agent_role="project",
-        prompt_template=(
-            "Based on the quality assessment, root cause analysis, and risk assessment "
-            "provided in context, create a detailed CAPA action plan with:\n"
-            "- Immediate containment actions\n"
-            "- Corrective actions with owners and deadlines\n"
-            "- Preventive actions with implementation timeline\n"
-            "- Effectiveness check plan\n\n"
-            "Deviation: {deviation}\nBatch: {batch}"
-        ),
+        name="CAPA Action Plan & Training Impact",
+        step_type=StepType.PARALLEL,
         require_review=True,
-        regulatory_topics=["capa", "quality_system"],
+        parallel_tasks=[
+            {
+                "name": "CAPA Action Plan",
+                "agent_role": "project",
+                "prompt_template": (
+                    "Based on the quality assessment, root cause analysis, and risk assessment "
+                    "provided in context, create a detailed CAPA action plan with:\n"
+                    "- Immediate containment actions\n"
+                    "- Corrective actions with owners and deadlines\n"
+                    "- Preventive actions with implementation timeline\n"
+                    "- Effectiveness check plan\n\n"
+                    "Deviation: {deviation}\nBatch: {batch}"
+                ),
+                "regulatory_topics": ["capa", "quality_system"],
+            },
+            {
+                "name": "Training Impact Assessment",
+                "agent_role": "training",
+                "prompt_template": (
+                    "Based on the deviation, root cause analysis, and risk assessment "
+                    "in context, assess the training and competency impact:\n\n"
+                    "- Were training gaps a contributing factor?\n"
+                    "- Which personnel/roles need retraining?\n"
+                    "- What training program changes are needed to prevent recurrence?\n"
+                    "- Define competency verification criteria\n\n"
+                    "Deviation: {deviation}\nBatch: {batch}, Product: {product}"
+                ),
+                "regulatory_topics": ["training", "capa"],
+            },
+        ],
     ))
 
     team.add_step(WorkflowStep(
@@ -110,7 +130,7 @@ def capa_workflow(
             "Deviation: {deviation}\nBatch: {batch}\nProduct: {product}\n\n"
             "Include all sections: description, classification, root cause, "
             "risk assessment, corrective actions, preventive actions, "
-            "effectiveness criteria, and approval signatures."
+            "training impact assessment, effectiveness criteria, and approval signatures."
         ),
         require_review=True,
         regulatory_topics=["documentation", "capa", "deviation"],
@@ -489,6 +509,19 @@ def oos_investigation_workflow(
                 ),
                 "regulatory_topics": ["risk", "oos"],
             },
+            {
+                "name": "Regulatory Notification Assessment",
+                "agent_role": "regulatory",
+                "prompt_template": (
+                    "Assess regulatory notification requirements for this OOS:\n\n"
+                    "Test Result: {test_result} (Spec: {specification})\n"
+                    "Batch: {batch}, Product: {product}\n\n"
+                    "Determine: field alert report requirements (5-day, 15-day), "
+                    "recall classification criteria, impact on annual report, "
+                    "and notification requirements across all registered markets."
+                ),
+                "regulatory_topics": ["regulatory_submission", "oos", "recall"],
+            },
         ],
     ))
 
@@ -509,6 +542,140 @@ def oos_investigation_workflow(
         ),
         require_review=True,
         regulatory_topics=["documentation", "oos", "deviation"],
+    ))
+
+    return team
+
+
+def supplier_investigation_workflow(
+    enable_review: bool = False,
+    enable_structured_output: bool = False,
+    enable_audit_trail: bool = False,
+    enable_regulatory_context: bool = False,
+    audit_log_dir: Optional[Path] = None,
+) -> AgentTeam:
+    """
+    Supplier quality investigation workflow.
+
+    Variables: {issue}, {supplier}, {material}, {batch} (optional), {product} (optional)
+
+    Pipeline:
+      1. Supplier → Supplier assessment & material impact
+      2. Quality + Risk (parallel) → Compliance review + risk assessment
+      3. Regulatory → Filing impact assessment
+      4. Project → Supplier CAPA plan
+      5. Document → Complete supplier investigation report
+    """
+    team = AgentTeam(
+        name="Supplier Investigation Workflow",
+        enable_review=enable_review,
+        enable_structured_output=enable_structured_output,
+        enable_audit_trail=enable_audit_trail,
+        enable_regulatory_context=enable_regulatory_context,
+        audit_log_dir=audit_log_dir,
+    )
+
+    team.add_step(WorkflowStep(
+        name="Supplier Assessment",
+        agent_role="supplier",
+        prompt_template=(
+            "A supplier quality issue has been identified. Assess the supplier "
+            "and material impact:\n\n"
+            "Issue: {issue}\n"
+            "Supplier: {supplier}\n"
+            "Material: {material}\n"
+            "Affected Batch: {batch}\n"
+            "Product: {product}\n\n"
+            "Review supplier qualification status, quality agreement obligations, "
+            "incoming test data, CoA history, and prior audit findings."
+        ),
+        use_prior_context=False,
+        require_review=True,
+        regulatory_topics=["supplier", "quality_system"],
+    ))
+
+    team.add_step(WorkflowStep(
+        name="Quality & Risk Review",
+        step_type=StepType.PARALLEL,
+        require_review=True,
+        parallel_tasks=[
+            {
+                "name": "Quality Impact Review",
+                "agent_role": "quality",
+                "prompt_template": (
+                    "Review the quality impact of this supplier issue:\n\n"
+                    "Issue: {issue}\n"
+                    "Supplier: {supplier}, Material: {material}\n"
+                    "Batch: {batch}, Product: {product}\n\n"
+                    "Assess: batch disposition, adjacent batch impact, "
+                    "product quality effect, and GMP compliance status."
+                ),
+                "regulatory_topics": ["supplier", "deviation", "quality_system"],
+            },
+            {
+                "name": "Supply Chain Risk Assessment",
+                "agent_role": "risk",
+                "prompt_template": (
+                    "Assess supply chain and patient safety risk for this "
+                    "supplier quality issue:\n\n"
+                    "Issue: {issue}\n"
+                    "Supplier: {supplier}, Material: {material}\n"
+                    "Batch: {batch}, Product: {product}\n\n"
+                    "Evaluate: single-source risk, drug shortage potential, "
+                    "patient safety impact, and market withdrawal risk."
+                ),
+                "regulatory_topics": ["risk", "supplier"],
+            },
+        ],
+    ))
+
+    team.add_step(WorkflowStep(
+        name="Regulatory Filing Impact",
+        agent_role="regulatory",
+        prompt_template=(
+            "Based on the supplier assessment and quality/risk review in "
+            "context, assess regulatory filing impact:\n\n"
+            "Issue: {issue}\n"
+            "Supplier: {supplier}, Material: {material}\n"
+            "Product: {product}\n\n"
+            "Determine: variation/supplement requirements, DMF/ASMF impact, "
+            "field alert criteria, and notification timelines."
+        ),
+        require_review=True,
+        regulatory_topics=["regulatory_submission", "supplier"],
+    ))
+
+    team.add_step(WorkflowStep(
+        name="Supplier CAPA Plan",
+        agent_role="project",
+        prompt_template=(
+            "Based on all analysis in context, create a supplier CAPA plan:\n\n"
+            "Issue: {issue}\n"
+            "Supplier: {supplier}\n\n"
+            "Include: immediate containment, supplier corrective actions, "
+            "internal preventive actions, enhanced monitoring plan, "
+            "re-qualification criteria, and effectiveness verification."
+        ),
+        regulatory_topics=["capa", "supplier"],
+    ))
+
+    team.add_step(WorkflowStep(
+        name="Supplier Investigation Report",
+        step_type=StepType.SYNTHESIZE,
+        synthesize_role="document",
+        synthesize_prompt=(
+            "Produce a complete Supplier Quality Investigation Report "
+            "using all analysis from context.\n\n"
+            "Issue: {issue}\n"
+            "Supplier: {supplier}\n"
+            "Material: {material}\n"
+            "Batch: {batch}, Product: {product}\n\n"
+            "Include: supplier assessment, quality impact, risk evaluation, "
+            "regulatory filing requirements, CAPA plan, monitoring plan, "
+            "and approval signatures."
+        ),
+        require_review=True,
+        regulatory_topics=["documentation", "supplier"],
     ))
 
     return team
@@ -541,8 +708,13 @@ WORKFLOWS = {
     },
     "oos": {
         "factory": oos_investigation_workflow,
-        "description": "OOS investigation: lab investigation → classification → root cause/risk → report",
+        "description": "OOS investigation: lab investigation → classification → root cause/risk/regulatory → report",
         "variables": ["test_result", "specification", "method", "batch", "product"],
+    },
+    "supplier": {
+        "factory": supplier_investigation_workflow,
+        "description": "Supplier investigation: assessment → quality/risk → regulatory impact → CAPA → report",
+        "variables": ["issue", "supplier", "material", "batch", "product"],
     },
 }
 

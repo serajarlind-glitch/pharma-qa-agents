@@ -431,6 +431,10 @@ TOPIC_INDEX: dict[str, list[Regulation]] = {
     "dissolution": [USP_GENERAL_CHAPTERS, ICH_Q2],
     "residual_solvents": [ICH_Q3C, USP_GENERAL_CHAPTERS],
     "equipment_qualification": [EU_GMP_ANNEX15, FDA_21CFR_211],
+    "training": [FDA_21CFR_211, EU_GMP_PART1, ICH_Q10],
+    "supplier": [FDA_21CFR_211, ICH_Q7, EU_GMP_PART1],
+    "regulatory_submission": [ICH_Q12, ICH_Q10],
+    "recall": [FDA_21CFR_211, EU_GMP_PART1],
 }
 
 

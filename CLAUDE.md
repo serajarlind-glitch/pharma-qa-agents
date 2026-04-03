@@ -17,6 +17,9 @@ Upgraded from a legacy Ollama-based CLI to a Claude-native multi-agent system wi
 | `audit` | Audit & Inspection Readiness | FDA/EMA inspection prep, gap analysis, 483 responses |
 | `document` | Document Production Specialist | SOPs, CAPA forms, protocols, investigation reports |
 | `analytical` | Analytical Method Writer | HPLC, dissolution, method validation, ICH Q2 |
+| `training` | Training & Competency Specialist | Training programs, competency gaps, human error analysis, retraining |
+| `regulatory` | Regulatory Affairs Advisor | Submission strategy, field alerts, recalls, post-approval changes |
+| `supplier` | Supplier Quality Manager | Vendor qualification, incoming material, supplier CAPA, quality agreements |
 
 ## Precision Layers (99.99% Target)
 
@@ -113,11 +116,12 @@ python run.py workflow capa --precision --var deviation="Dissolution failure" --
 
 | Workflow | Agents Used | Steps | Key Variables |
 |----------|------------|-------|---------------|
-| `capa` | quality, lean, risk, project, document | 4 (incl. parallel) | deviation, batch, product |
+| `capa` | quality, lean, risk, project, training, document | 5 (incl. parallel) | deviation, batch, product |
 | `validation` | validation, risk, analytical, document | 4 | equipment, validation_type, process |
 | `audit` | audit, quality, risk, project, document | 4 (incl. parallel) | audit_type, scope, timeline |
 | `sop` | quality, lean, document | 3 | title, process, department |
-| `oos` | analytical, quality, lean, risk, document | 4 (incl. parallel) | test_result, specification, method, batch, product |
+| `oos` | analytical, quality, lean, risk, regulatory, document | 4 (incl. parallel) | test_result, specification, method, batch, product |
+| `supplier` | supplier, quality, risk, regulatory, project, document | 5 (incl. parallel) | issue, supplier, material, batch, product |
 
 ## Project Structure
 ```
