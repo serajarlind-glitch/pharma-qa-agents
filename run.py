@@ -122,6 +122,8 @@ def run_workflow_cmd(args):
         print("  Mode: PRECISION (review + structured output + audit trail + regulatory context)")
     print()
 
+    live_reg = getattr(args, "live", False)
+
     result = run_workflow(
         args.workflow_name,
         variables=variables,
@@ -131,6 +133,7 @@ def run_workflow_cmd(args):
         enable_structured_output=precision,
         enable_audit_trail=precision,
         enable_regulatory_context=precision,
+        enable_live_regulatory=precision or live_reg,
         audit_log_dir=audit_dir if precision else None,
     )
 
@@ -178,6 +181,10 @@ def main():
     wf_p.add_argument(
         "-p", "--precision", action="store_true",
         help="Enable precision mode: QA review, structured output, audit trail, regulatory context",
+    )
+    wf_p.add_argument(
+        "--live", action="store_true",
+        help="Enable live regulatory intelligence (checks official sources for current data)",
     )
 
     args = parser.parse_args()

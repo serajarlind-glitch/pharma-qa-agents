@@ -19,6 +19,7 @@ from pharma_agents.reviewer import QAReviewer
 from pharma_agents.workflows import WORKFLOWS, run_workflow
 from pharma_agents.audit_trail import AuditTrail
 from pharma_agents.schemas import AgentOutput, PeerReviewResult
+from pharma_agents.regulatory_intelligence import RegulatoryIntelligence
 
 __all__ = [
     "PharmaAgent",
@@ -31,4 +32,5 @@ __all__ = [
     "AuditTrail",
     "AgentOutput",
     "PeerReviewResult",
+    "RegulatoryIntelligence",
 ]

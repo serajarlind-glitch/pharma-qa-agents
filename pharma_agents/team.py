@@ -26,6 +26,7 @@ from pharma_agents.schemas import (
 from pharma_agents.reviewer import QAReviewer
 from pharma_agents.audit_trail import AuditTrail
 from pharma_agents.standards import get_regulations_for_topic, format_regulation_context
+from pharma_agents.regulatory_intelligence import get_live_regulatory_context
 
 
 class StepType(str, Enum):
@@ -148,11 +149,14 @@ class AgentTeam:
         enable_structured_output: bool = False,
         enable_audit_trail: bool = False,
         enable_regulatory_context: bool = False,
+        enable_live_regulatory: bool = False,
         # Quality gate thresholds
         review_min_score: int = 7,
         max_revision_attempts: int = 1,
         # Audit trail output
         audit_log_dir: Optional[Path] = None,
+        # Live regulatory cache
+        regulatory_cache_dir: Optional[Path] = None,
     ):
         self.name = name
         self.model = model
@@ -166,7 +170,9 @@ class AgentTeam:
         self.enable_structured_output = enable_structured_output
         self.enable_audit_trail = enable_audit_trail
         self.enable_regulatory_context = enable_regulatory_context
+        self.enable_live_regulatory = enable_live_regulatory
         self.review_min_score = review_min_score
+        self.regulatory_cache_dir = regulatory_cache_dir
         self.max_revision_attempts = max_revision_attempts
 
         # Initialize subsystems
@@ -208,10 +214,13 @@ class AgentTeam:
         """Auto-inject relevant regulatory references based on topic hints."""
         if not self.enable_regulatory_context or not topics:
             return prompt
+
+        context_parts = []
+
+        # Static regulatory reference database
         all_regs = []
         for topic in topics:
             all_regs.extend(get_regulations_for_topic(topic))
-        # Deduplicate
         seen = set()
         unique = []
         for r in all_regs:
@@ -219,8 +228,26 @@ class AgentTeam:
                 seen.add(r.code)
                 unique.append(r)
         if unique:
-            reg_context = format_regulation_context(unique)
-            return f"{reg_context}\n\n---\n\n{prompt}"
+            context_parts.append(format_regulation_context(unique))
+
+        # Live regulatory intelligence (if enabled)
+        if self.enable_live_regulatory:
+            try:
+                live_context = get_live_regulatory_context(
+                    topics, cache_dir=self.regulatory_cache_dir
+                )
+                if live_context:
+                    context_parts.append(live_context)
+            except Exception:
+                context_parts.append(
+                    "LIVE REGULATORY CHECK: Could not reach regulatory sources. "
+                    "Flag all citations for manual verification against current "
+                    "published regulatory text."
+                )
+
+        if context_parts:
+            combined = "\n\n---\n\n".join(context_parts)
+            return f"{combined}\n\n---\n\n{prompt}"
         return prompt
 
     def _inject_structured_output_requirement(self, prompt: str) -> str:

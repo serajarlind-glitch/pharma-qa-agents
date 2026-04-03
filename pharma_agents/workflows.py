@@ -18,6 +18,7 @@ def capa_workflow(
     enable_structured_output: bool = False,
     enable_audit_trail: bool = False,
     enable_regulatory_context: bool = False,
+    enable_live_regulatory: bool = False,
     audit_log_dir: Optional[Path] = None,
 ) -> AgentTeam:
     """
@@ -37,6 +38,7 @@ def capa_workflow(
         enable_structured_output=enable_structured_output,
         enable_audit_trail=enable_audit_trail,
         enable_regulatory_context=enable_regulatory_context,
+        enable_live_regulatory=enable_live_regulatory,
         audit_log_dir=audit_log_dir,
     )
 
@@ -144,6 +146,7 @@ def validation_workflow(
     enable_structured_output: bool = False,
     enable_audit_trail: bool = False,
     enable_regulatory_context: bool = False,
+    enable_live_regulatory: bool = False,
     audit_log_dir: Optional[Path] = None,
 ) -> AgentTeam:
     """
@@ -163,6 +166,7 @@ def validation_workflow(
         enable_structured_output=enable_structured_output,
         enable_audit_trail=enable_audit_trail,
         enable_regulatory_context=enable_regulatory_context,
+        enable_live_regulatory=enable_live_regulatory,
         audit_log_dir=audit_log_dir,
     )
 
@@ -240,6 +244,7 @@ def audit_readiness_workflow(
     enable_structured_output: bool = False,
     enable_audit_trail: bool = False,
     enable_regulatory_context: bool = False,
+    enable_live_regulatory: bool = False,
     audit_log_dir: Optional[Path] = None,
 ) -> AgentTeam:
     """
@@ -259,6 +264,7 @@ def audit_readiness_workflow(
         enable_structured_output=enable_structured_output,
         enable_audit_trail=enable_audit_trail,
         enable_regulatory_context=enable_regulatory_context,
+        enable_live_regulatory=enable_live_regulatory,
         audit_log_dir=audit_log_dir,
     )
 
@@ -349,6 +355,7 @@ def sop_creation_workflow(
     enable_structured_output: bool = False,
     enable_audit_trail: bool = False,
     enable_regulatory_context: bool = False,
+    enable_live_regulatory: bool = False,
     audit_log_dir: Optional[Path] = None,
 ) -> AgentTeam:
     """
@@ -367,6 +374,7 @@ def sop_creation_workflow(
         enable_structured_output=enable_structured_output,
         enable_audit_trail=enable_audit_trail,
         enable_regulatory_context=enable_regulatory_context,
+        enable_live_regulatory=enable_live_regulatory,
         audit_log_dir=audit_log_dir,
     )
 
@@ -425,6 +433,7 @@ def oos_investigation_workflow(
     enable_structured_output: bool = False,
     enable_audit_trail: bool = False,
     enable_regulatory_context: bool = False,
+    enable_live_regulatory: bool = False,
     audit_log_dir: Optional[Path] = None,
 ) -> AgentTeam:
     """
@@ -445,6 +454,7 @@ def oos_investigation_workflow(
         enable_structured_output=enable_structured_output,
         enable_audit_trail=enable_audit_trail,
         enable_regulatory_context=enable_regulatory_context,
+        enable_live_regulatory=enable_live_regulatory,
         audit_log_dir=audit_log_dir,
     )
 
@@ -552,6 +562,7 @@ def supplier_investigation_workflow(
     enable_structured_output: bool = False,
     enable_audit_trail: bool = False,
     enable_regulatory_context: bool = False,
+    enable_live_regulatory: bool = False,
     audit_log_dir: Optional[Path] = None,
 ) -> AgentTeam:
     """
@@ -572,6 +583,7 @@ def supplier_investigation_workflow(
         enable_structured_output=enable_structured_output,
         enable_audit_trail=enable_audit_trail,
         enable_regulatory_context=enable_regulatory_context,
+        enable_live_regulatory=enable_live_regulatory,
         audit_log_dir=audit_log_dir,
     )
 
@@ -729,6 +741,7 @@ def run_workflow(
     enable_structured_output: bool = False,
     enable_audit_trail: bool = False,
     enable_regulatory_context: bool = False,
+    enable_live_regulatory: bool = False,
     audit_log_dir: Optional[Path] = None,
 ) -> "WorkflowResult":
     """
@@ -772,6 +785,7 @@ def run_workflow(
         enable_structured_output=enable_structured_output,
         enable_audit_trail=enable_audit_trail,
         enable_regulatory_context=enable_regulatory_context,
+        enable_live_regulatory=enable_live_regulatory,
         audit_log_dir=audit_log_dir,
     )
     team.model = model

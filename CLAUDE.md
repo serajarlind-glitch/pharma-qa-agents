@@ -59,7 +59,20 @@ Full GxP traceability for every agent interaction:
 - Review scores and gate decisions
 - Append-only JSONL log files
 
-### 5. Precision Prompt Standards
+### 5. Live Regulatory Intelligence (`regulatory_intelligence.py`)
+Real-time verification against official regulatory sources:
+- EudraLex Volume 4 (EU GMP) — current annexes and chapters
+- FDA 21 CFR (eCFR) — live federal register text
+- ICH Quality Guidelines — Q1 through Q14
+- FDA Warning Letters — latest enforcement trends
+- PIC/S and WHO GMP — international harmonization
+
+Agents receive live source URLs and accessibility status, and are instructed
+to flag citations for verification against current published text.
+
+Enable with `--live` flag or `enable_live_regulatory=True`.
+
+### 6. Precision Prompt Standards
 Every agent prompt includes mandatory rules:
 - Citation accuracy (never fabricate section numbers)
 - Confidence declaration for each conclusion
